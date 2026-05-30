@@ -35,12 +35,6 @@ jobs:
           coverage: xdebug
           tools: composer:v2
 
-      - name: Copy .env
-        run: cp .env.example .env
-
-      - name: Generate app key
-        run: php artisan key:generate
-
       - name: Cache composer dependencies
         uses: actions/cache@v3
         with:
@@ -51,6 +45,12 @@ jobs:
 
       - name: Install composer dependencies
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
 
       - name: Cache node modules
         uses: actions/cache@v3
