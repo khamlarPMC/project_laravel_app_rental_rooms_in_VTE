@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Address;
 use App\Models\Room;
+use App\Models\RoomImage;
+use Illuminate\Http\File;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class RoomController extends Controller
 {
@@ -14,9 +18,10 @@ class RoomController extends Controller
     public function index()
     {
         $rooms = Room::where('is_approved', true)->with(['owner', 'address', 'images', 'amenities'])->get();
+
         return response()->json([
             'success' => true,
-            'data' => $rooms
+            'data' => $rooms,
         ]);
     }
 
@@ -27,16 +32,16 @@ class RoomController extends Controller
     {
         $room = Room::with(['owner', 'address', 'images', 'amenities'])->find($id);
 
-        if (!$room) {
+        if (! $room) {
             return response()->json([
                 'success' => false,
-                'message' => 'Room not found'
+                'message' => 'Room not found',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'data' => $room
+            'data' => $room,
         ]);
     }
 
@@ -48,10 +53,10 @@ class RoomController extends Controller
         $rooms = Room::where('owner_id', $request->user()->user_id)
             ->with(['owner', 'address', 'images', 'amenities'])
             ->get();
-            
+
         return response()->json([
             'success' => true,
-            'data' => $rooms
+            'data' => $rooms,
         ]);
     }
 
@@ -67,12 +72,15 @@ class RoomController extends Controller
             'village' => 'required|string',
             'district' => 'required|string',
             'province' => 'nullable|string',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:20480',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:20480',
             'amenities' => 'nullable|array',
             'amenities.*' => 'exists:amenity,amenity_id',
         ]);
 
         // Create Address
-        $address = \App\Models\Address::create([
+        $address = Address::create([
             'village' => $validated['village'],
             'district' => $validated['district'],
             'province' => $validated['province'] ?? 'Vientiane',
@@ -89,16 +97,7 @@ class RoomController extends Controller
         ]);
 
         // Handle images if any
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('rooms', 'public');
-                \App\Models\RoomImage::create([
-                    'room_id' => $room->room_id,
-                    'image_url' => $path,
-                    'is_main' => false,
-                ]);
-            }
-        }
+        $this->saveUploadedImages($request, $room);
 
         // Handle amenities
         if ($request->has('amenities')) {
@@ -107,8 +106,36 @@ class RoomController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $room->load(['address', 'images', 'amenities'])
+            'data' => $room->load(['address', 'images', 'amenities']),
         ], 201);
+    }
+
+    protected function saveUploadedImages(Request $request, Room $room)
+    {
+        $uploadedImages = null;
+
+        if ($request->hasFile('images')) {
+            $uploadedImages = $request->file('images');
+        } elseif ($request->hasFile('image')) {
+            $uploadedImages = $request->file('image');
+        }
+
+        if (! $uploadedImages) {
+            return;
+        }
+
+        if (! is_array($uploadedImages)) {
+            $uploadedImages = [$uploadedImages];
+        }
+
+        foreach ($uploadedImages as $image) {
+            $path = $this->compressAndStoreImage($image);
+            RoomImage::create([
+                'room_id' => $room->room_id,
+                'image_url' => $path,
+                'is_main' => false,
+            ]);
+        }
     }
 
     /**
@@ -118,10 +145,10 @@ class RoomController extends Controller
     {
         $room = Room::find($id);
 
-        if (!$room) {
+        if (! $room) {
             return response()->json([
                 'success' => false,
-                'message' => 'Room not found'
+                'message' => 'Room not found',
             ], 404);
         }
 
@@ -132,6 +159,9 @@ class RoomController extends Controller
             'village' => 'required|string',
             'district' => 'required|string',
             'province' => 'nullable|string',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:20480',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:20480',
             'removed_images' => 'nullable|array',
             'amenities' => 'nullable|array',
             'amenities.*' => 'exists:amenity,amenity_id',
@@ -139,7 +169,7 @@ class RoomController extends Controller
 
         // Update Address
         if ($room->address_id) {
-            $address = \App\Models\Address::find($room->address_id);
+            $address = Address::find($room->address_id);
             if ($address) {
                 $address->update([
                     'village' => $validated['village'],
@@ -159,13 +189,13 @@ class RoomController extends Controller
         // Handle removed images
         if ($request->has('removed_images')) {
             foreach ($request->removed_images as $fileName) {
-                $imageRecord = \App\Models\RoomImage::where('room_id', $id)
-                    ->where('image_url', 'like', '%' . $fileName . '%')
+                $imageRecord = RoomImage::where('room_id', $id)
+                    ->where('image_url', 'like', '%'.$fileName.'%')
                     ->first();
-                
+
                 if ($imageRecord) {
                     // Delete from storage
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($imageRecord->image_url);
+                    Storage::disk('public')->delete($imageRecord->image_url);
                     // Delete from database
                     $imageRecord->delete();
                 }
@@ -173,16 +203,7 @@ class RoomController extends Controller
         }
 
         // Handle new images
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $path = $image->store('rooms', 'public');
-                \App\Models\RoomImage::create([
-                    'room_id' => $room->room_id,
-                    'image_url' => $path,
-                    'is_main' => false,
-                ]);
-            }
-        }
+        $this->saveUploadedImages($request, $room);
 
         // Handle amenities
         if ($request->has('amenities')) {
@@ -191,7 +212,79 @@ class RoomController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $room->load(['address', 'images', 'amenities'])
+            'data' => $room->load(['address', 'images', 'amenities']),
         ]);
+    }
+
+    protected function compressAndStoreImage($file)
+    {
+        $realPath = $file->getRealPath();
+        $mime = $file->getMimeType();
+
+        $maxDim = 1200;
+        [$width, $height] = getimagesize($realPath);
+
+        $src = null;
+        if (str_contains($mime, 'jpeg') || str_contains($mime, 'jpg')) {
+            $src = @imagecreatefromjpeg($realPath);
+        } elseif (str_contains($mime, 'png')) {
+            $src = @imagecreatefrompng($realPath);
+        } elseif (str_contains($mime, 'gif')) {
+            $src = @imagecreatefromgif($realPath);
+        } elseif (str_contains($mime, 'webp')) {
+            $src = @imagecreatefromwebp($realPath);
+        }
+
+        if (! $src) {
+            return $file->store('rooms', 'public');
+        }
+
+        $newWidth = $width;
+        $newHeight = $height;
+        if ($width > $maxDim || $height > $maxDim) {
+            $ratio = $width / $height;
+            if ($ratio > 1) {
+                $newWidth = $maxDim;
+                $newHeight = $maxDim / $ratio;
+            } else {
+                $newHeight = $maxDim;
+                $newWidth = $maxDim * $ratio;
+            }
+        }
+
+        $dst = imagecreatetruecolor($newWidth, $newHeight);
+
+        if (str_contains($mime, 'png') || str_contains($mime, 'webp') || str_contains($mime, 'gif')) {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+        }
+
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        $extension = $file->getClientOriginalExtension();
+        if (empty($extension)) {
+            $extension = 'jpg';
+        }
+        $filename = uniqid().'_'.time().'.'.$extension;
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'compressed_image');
+
+        if (str_contains($mime, 'png')) {
+            imagepng($dst, $tempPath, 8);
+        } elseif (str_contains($mime, 'gif')) {
+            imagegif($dst, $tempPath);
+        } elseif (str_contains($mime, 'webp')) {
+            imagewebp($dst, $tempPath, 80);
+        } else {
+            imagejpeg($dst, $tempPath, 80);
+        }
+
+        $storedPath = Storage::disk('public')->putFileAs('rooms', new File($tempPath), $filename);
+
+        imagedestroy($src);
+        imagedestroy($dst);
+        @unlink($tempPath);
+
+        return $storedPath;
     }
 }

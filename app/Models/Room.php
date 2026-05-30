@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Room extends Model
 {
     protected $table = 'room';
+
     protected $primaryKey = 'room_id';
+
     const UPDATED_AT = null;
 
     protected $fillable = [
@@ -17,7 +19,7 @@ class Room extends Model
         'description',
         'room_status',
         'address_id',
-        'is_approved'
+        'is_approved',
     ];
 
     protected $casts = [

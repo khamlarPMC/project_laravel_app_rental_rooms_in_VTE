@@ -1,12 +1,11 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\RoomController;
-use App\Http\Controllers\Api\BookingController;
-use App\Http\Controllers\Api\AmenityController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AmenityController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\RoomController;
+use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -19,7 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'me']);
     Route::put('/user', [AuthController::class, 'updateProfile']);
-    
+
     Route::get('/owner/rooms', [RoomController::class, 'myRooms']);
     Route::post('/rooms', [RoomController::class, 'store']);
     Route::put('/rooms/{id}', [RoomController::class, 'update']);
@@ -31,7 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
     Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
     Route::put('/bookings/{id}', [BookingController::class, 'update']);
-    
+
     // Admin Routes
     Route::get('/admin/users', [AdminController::class, 'getAllUsers']);
     Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
