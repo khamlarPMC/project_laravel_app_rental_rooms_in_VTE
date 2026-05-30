@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class RoomImage extends Model
 {
@@ -19,6 +20,11 @@ class RoomImage extends Model
     protected $casts = [
         'is_main' => 'boolean',
     ];
+
+    public function getImageUrlAttribute($value)
+    {
+        return Storage::disk('public')->url($value);
+    }
 
     public function room()
     {
