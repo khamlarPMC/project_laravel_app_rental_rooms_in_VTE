@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Storage;
 class RoomImage extends Model
 {
     protected $table = 'room_image';
+
     protected $primaryKey = 'image_id';
+
     public $timestamps = false;
 
     protected $fillable = [

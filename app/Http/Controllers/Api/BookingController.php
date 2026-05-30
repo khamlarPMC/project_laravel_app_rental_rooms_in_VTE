@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Room;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
@@ -28,7 +27,7 @@ class BookingController extends Controller
         if ($room->owner_id == $request->user()->user_id) {
             return response()->json([
                 'success' => false,
-                'message' => 'You cannot book your own room.'
+                'message' => 'You cannot book your own room.',
             ], 400);
         }
 
@@ -36,7 +35,7 @@ class BookingController extends Controller
         if ($room->room_status !== 'available') {
             return response()->json([
                 'success' => false,
-                'message' => 'This room is not available for booking.'
+                'message' => 'This room is not available for booking.',
             ], 400);
         }
 
@@ -52,7 +51,7 @@ class BookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $booking->load(['room', 'tenant'])
+            'data' => $booking->load(['room', 'tenant']),
         ], 201);
     }
 
@@ -68,7 +67,7 @@ class BookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $bookings
+            'data' => $bookings,
         ]);
     }
 
@@ -77,16 +76,16 @@ class BookingController extends Controller
      */
     public function ownerBookings(Request $request)
     {
-        $bookings = Booking::whereHas('room', function($query) use ($request) {
+        $bookings = Booking::whereHas('room', function ($query) use ($request) {
             $query->where('owner_id', $request->user()->user_id);
         })
-        ->with(['room', 'tenant'])
-        ->orderBy('booking_date', 'desc')
-        ->get();
+            ->with(['room', 'tenant'])
+            ->orderBy('booking_date', 'desc')
+            ->get();
 
         return response()->json([
             'success' => true,
-            'data' => $bookings
+            'data' => $bookings,
         ]);
     }
 
@@ -97,7 +96,7 @@ class BookingController extends Controller
     {
         $booking = Booking::with('room')->find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return response()->json(['success' => false, 'message' => 'Booking not found'], 404);
         }
 
@@ -107,11 +106,11 @@ class BookingController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:confirmed,cancelled,completed'
+            'status' => 'required|in:confirmed,cancelled,completed',
         ]);
 
         $booking->update([
-            'booking_status' => $validated['status']
+            'booking_status' => $validated['status'],
         ]);
 
         // If confirmed, update room status to occupied
@@ -121,7 +120,7 @@ class BookingController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $booking
+            'data' => $booking,
         ]);
     }
 
@@ -132,7 +131,7 @@ class BookingController extends Controller
     {
         $booking = Booking::find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return response()->json(['success' => false, 'message' => 'Booking not found'], 404);
         }
 
@@ -144,19 +143,19 @@ class BookingController extends Controller
         // Only allow cancellation if pending
         if ($booking->booking_status !== 'pending') {
             return response()->json([
-                'success' => false, 
-                'message' => 'Only pending bookings can be cancelled.'
+                'success' => false,
+                'message' => 'Only pending bookings can be cancelled.',
             ], 400);
         }
 
         $booking->update([
-            'booking_status' => 'cancelled'
+            'booking_status' => 'cancelled',
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Booking cancelled successfully',
-            'data' => $booking
+            'data' => $booking,
         ]);
     }
 
@@ -167,7 +166,7 @@ class BookingController extends Controller
     {
         $booking = Booking::find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return response()->json(['success' => false, 'message' => 'Booking not found'], 404);
         }
 
@@ -179,8 +178,8 @@ class BookingController extends Controller
         // Only allow edit if pending
         if ($booking->booking_status !== 'pending') {
             return response()->json([
-                'success' => false, 
-                'message' => 'Only pending bookings can be edited.'
+                'success' => false,
+                'message' => 'Only pending bookings can be edited.',
             ], 400);
         }
 
@@ -199,7 +198,7 @@ class BookingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Booking updated successfully',
-            'data' => $booking->load('room')
+            'data' => $booking->load('room'),
         ]);
     }
 }

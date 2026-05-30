@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\Address;
 use App\Models\Room;
 use App\Models\User;
-use App\Models\Address;
+use Illuminate\Database\Seeder;
 
 class RoomSeeder extends Seeder
 {

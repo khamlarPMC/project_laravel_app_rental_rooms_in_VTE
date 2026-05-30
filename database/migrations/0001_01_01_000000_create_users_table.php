@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('gender', 10)->nullable();
             $table->unsignedBigInteger('role_id')->nullable();
             $table->unsignedBigInteger('address_id')->nullable();
-            
+
             // Laravel's default timestamps handle created_at and updated_at
             $table->timestamps();
 
